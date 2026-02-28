@@ -2,41 +2,45 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Hotline: Global Chaos Simulator</title>
+<title>Hotline: Global Chaos Simulator V2.2</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body{background:#0b0f1a;color:white;font-family:Arial;margin:0}
+body{background:#0b0f1a;color:white;font-family:Arial;margin:0;padding:0}
 #container{display:flex;justify-content:center;gap:20px;padding:20px}
-#game{width:550px;text-align:center}
-#sidePanel{width:400px;background:#121a2b;padding:15px;border-radius:15px;display:flex;flex-direction:column;gap:15px;}
+#game{width:650px;text-align:center}
+#sidePanel{width:500px;background:#121a2b;padding:15px;border-radius:15px;display:flex;flex-direction:column;gap:15px;}
 button{padding:10px;margin:5px;border:none;border-radius:10px;cursor:pointer;width:100%}
 #bar{height:28px;background:#333;border-radius:20px;overflow:hidden;margin:15px 0}
 #tension{height:100%;background:red;width:50%}
-.card{background:#121a2b;padding:15px;border-radius:15px;margin-top:10px;text-align:left;min-height:120px}
+.card{background:#121a2b;padding:15px;border-radius:15px;margin-top:10px;text-align:left;min-height:160px;overflow-y:auto;max-height:220px;}
 #restartScreen{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center}
 .bigBtn{font-size:28px;padding:20px 50px;background:#e74c3c;width:auto;margin-top:20px;border-radius:15px}
 .used{background:gray;cursor:not-allowed}
 canvas{background:#222;border-radius:10px;margin-top:10px}
-#startBtn{margin-top:20px;background:#3498db;color:white;font-weight:bold;font-size:20px;padding:15px 30px;border-radius:15px}
-#choices button{font-size:15px}
+#startBtn{margin-top:20px;background:#3498db;color:white;font-weight:bold;font-size:20px;padding:15px 30px;border-radius:15px;display:block;margin-left:auto;margin-right:auto}
+#choices button{font-size:14px;display:block;margin:5px 0;text-align:left}
 #cooldownMsg{color:#f39c12;font-weight:bold;margin-top:5px;height:20px}
 #liveComments{background:#1c253b;border-radius:10px;padding:10px;flex-grow:1;overflow-y:auto;height:300px;font-size:14px;}
 .liveComment{border-bottom:1px solid #2c3e50;padding:5px 0;margin-bottom:3px;}
 .red{color:#e74c3c;}
 .yellow{color:#f1c40f;}
 .green{color:#2ecc71;}
+#worldMap{width:100%;height:250px;background:#0d1321;border-radius:10px;position:relative;margin-top:10px;cursor:pointer}
+.mapPoint{width:14px;height:14px;border-radius:50%;position:absolute;transition:0.3s;}
+.important{border:2px solid #f1c40f;}
 </style>
 </head>
 <body>
 <div id="container">
 <div id="game">
-<h1>☎️ Hotline: Global Chaos Simulator</h1>
-<div>⏱️ Time: <span id="time">0</span></div>
+<h1>☎️ Hotline: Global Chaos Simulator V2.2</h1>
+<div>⏱️ Time: <span id="time">0</span> s</div>
 <div id="bar"><div id="tension"></div></div>
 <div id="event" class="card">Press START to begin</div>
 <div id="choices"></div>
 <div id="cooldownMsg"></div>
 <button id="startBtn" onclick="startGame()">START / RESTART</button>
+<div id="worldMap"></div>
 </div>
 <div id="sidePanel">
 <button id="abilityBtn" onclick="useAbility()">🧊 Emergency De-escalation</button>
@@ -53,11 +57,11 @@ canvas{background:#222;border-radius:10px;margin-top:10px}
 
 <script>
 let tension=50,time=0,gameRunning=false,tensionTimer,oddsTimer,buttonCooldown=false,commentsTimer;
-let abilityUsed=false,odds=50; let lastSituation="";
-const ctx=document.getElementById("oddsChart");
-const chart=new Chart(ctx,{type:"line",data:{labels:[],datasets:[{label:"War Probability %",data:[],borderColor:"yellow",tension:0.3}]},options:{scales:{y:{min:0,max:100}},animation:false}});
+let abilityUsed=false,odds=50,lastSituation="",localTension=50;
 
-// Events, reactions, advisors, choices, live comments
+const ctx=document.getElementById("oddsChart");
+const chart=new Chart(ctx,{type:"line",data:{labels:[],datasets:[{label:"Global War Probability %",data:[],borderColor:"yellow",tension:0.3}]},options:{scales:{y:{min:0,max:100}},animation:false}});
+
 const openings=["Breaking:","Urgent:","Live:","Alert:","FLASH:","Exclusive:","Developing:","Emergency:"];
 const situations=[
 "an unmarked drone spotted over the Gulf","a mysterious explosion in Iran","troops deployed near disputed waters",
@@ -75,7 +79,9 @@ const situations=[
 "Israel launches accidental disco ball over Tehran","Saudi Arabia misplaces oil tanker, everyone panics",
 "Anonymous hacker posts meme as official threat","Drone mistakes balloon festival for military exercise",
 "Sudden TikTok leak increases public panic","Fake peace treaty spreads on social media",
-"Unplanned air parade triggers defense lockdown","Intelligence leak confuses advisors"
+"Unplanned air parade triggers defense lockdown","Intelligence leak confuses advisors",
+"Blackout in Riyadh confuses military","Secret peace negotiation leaked on TikTok","Rocket misfires in Gaza",
+"Hacker posts fake weather alert in Dubai","Drone parade confuses Israel defense","New viral meme sparks panic"
 ];
 const reactions=[
 "Markets crash globally","UN calls emergency meeting","Twitter goes wild",
@@ -84,7 +90,7 @@ const reactions=[
 "Analysts panic","Cyber experts issue alerts","Governments issue statements",
 "Social media is flooded with memes","Experts speculate wildly","Public protests erupt",
 "Military advisors whisper frantically","Satellite images are analyzed urgently",
-"Intelligence agencies scramble","Warnings issued to diplomats"
+"Intelligence agencies scramble","Warnings issued to diplomats","Intern posts confusing tweet"
 ];
 const advisors=[
 "The General: 'We must act immediately.'","The Diplomat: 'Call them. Now.'",
@@ -94,25 +100,18 @@ const advisors=[
 "A rogue analyst tweets nonsense.","The CIA liaison winks.","A drone operator shrugs.",
 "Your cabinet argues heatedly.","A military advisor consults maps."
 ];
+
 const choicePool=[
-{t:"Open direct hotline",e:-14},{t:"Issue calm public statement",e:-10},
-{t:"Blame technical malfunction",e:-6},{t:"Request UN mediation",e:-12},
-{t:"Delay response",e:5},{t:"Post strong speech",e:9},
-{t:"Show military presence",e:14},{t:"Leak counter-intelligence",e:-8},
-{t:"Do nothing",e:7},{t:"Backchannel negotiation",e:-15},
-{t:"New sanctions",e:11},{t:"Recall diplomats",e:8},
-{t:"Investigate mysterious explosion",e:-10},{t:"Send troops to patrol",e:12},
-{t:"Public reassurance tweet",e:-8},{t:"Blame conspiracy theories",e:6},
-{t:"Analyze satellite images",e:-9},{t:"Deploy air defense",e:13},
-{t:"Call press conference",e:-7},{t:"Send humanitarian aid",e:-6},
-{t:"Quietly meet foreign officials",e:-12},{t:"Stage photo op",e:-5},
-{t:"Send viral meme to calm population",e:-8},{t:"Release military pigeons",e:5},
-{t:"Tweet a cryptic quote",e:-6},{t:"Launch humanitarian aid disguised as missile",e:-9},
-{t:"Conspiracy TikTok leak",e:6},{t:"Meme bomb on social media",e:-7},
-{t:"Drone releases balloons instead of missiles",e:4},{t:"Fake press release",e:-5},
-{t:"💌 Send Meme Diplomacy",e:-12},{t:"🎭 Stage Fake Parade",e:-10},
-{t:"🤯 Panic Tweet",e:10},{t:"🕵️ Spy Leak",e:-15},{t:"💣 Surprise Bombing",e:20}
+{t:"Call direct hotline 🔥",e:-15},{t:"Send meme diplomacy 🟡",e:-10},
+{t:"Deploy air defense 🔴",e:15},{t:"Investigate explosion 🟢",e:-8},
+{t:"Delay response 🔴",e:7},{t:"Stage photo op 🟡",e:-5},
+{t:"Leak counter-intelligence 🔴",e:-10},{t:"Deploy humanitarian aid 🟢",e:-8},
+{t:"Blame conspiracy theories 🟡",e:5},{t:"Launch emergency press conference 🔴",e:12},
+{t:"Release drone balloons 🟡",e:4},{t:"Backchannel negotiation 🔥",e:-12},
+{t:"Quietly meet foreign officials 🟢",e:-10},{t:"Send viral meme to calm population 🟡",e:-7},
+{t:"Meme bomb on social media 🟡",e:-8},{t:"Panic Tweet 🔴",e:10}
 ];
+
 const liveComments=[
 {t:"Analyst Joe: 'This is definitely going to escalate!'",c:"red"},
 {t:"Market guru: 'Buy defense stocks, lol!'",c:"green"},
@@ -127,22 +126,27 @@ const liveComments=[
 {t:"Al-J’Ziza intern: 'Should I even post this?'",c:"yellow"}
 ];
 
+const mapLocations=[
+{country:"Iran",x:300,y:100},{country:"Israel",x:350,y:150},{country:"Saudi Arabia",x:400,y:200},
+{country:"Turkey",x:250,y:50},{country:"UAE",x:420,y:180},{country:"Gaza",x:360,y:155}
+];
+
 function startGame(){
 document.getElementById("restartScreen").style.display="none";
-tension=50;time=0;odds=50;abilityUsed=false;gameRunning=true;buttonCooldown=false;
+tension=50;time=0;odds=50;abilityUsed=false;gameRunning=true;buttonCooldown=false;localTension=50;
 document.getElementById("abilityBtn").disabled=false;document.getElementById("abilityBtn").classList.remove("used");
-document.getElementById("cooldownMsg").innerText="";
-document.getElementById("liveComments").innerHTML="";
+document.getElementById("cooldownMsg").innerText="";document.getElementById("liveComments").innerHTML="";
 chart.data.labels=[];chart.data.datasets[0].data=[];chart.update();
-updateBar();nextEvent();
+updateBar();nextEvent();updateMap();
 clearInterval(tensionTimer);clearInterval(oddsTimer);clearInterval(commentsTimer);
 tensionTimer=setInterval(()=>{
 time++;document.getElementById("time").innerText=time;
-tension+=1+Math.floor(time/20);
+tension+=1+Math.floor(time/20);localTension+=Math.random()*2;
 clamp();updateBar();checkGame();
 },1000);
 oddsTimer=setInterval(updateOdds,1000);
 commentsTimer=setInterval(addLiveComment,6000);
+setInterval(randomMiniCrisis,15000);
 }
 
 function nextEvent(){
@@ -154,22 +158,24 @@ reactions[Math.floor(Math.random()*reactions.length)]+".\n\n"+
 advisors[Math.floor(Math.random()*advisors.length)];
 document.getElementById("event").innerText=text;
 const div=document.getElementById("choices");div.innerHTML="";
-let shuffled=choicePool.sort(()=>0.5-Math.random()).slice(0,3);
+let shuffled=choicePool.sort(()=>0.5-Math.random()).slice(0,4);
 shuffled.forEach(c=>{
 const btn=document.createElement("button");btn.innerText=c.t;
+if(c.t.includes("🔥")) btn.classList.add("important");
 btn.onclick=()=>{
 if(!gameRunning||buttonCooldown) return;
 buttonCooldown=true;document.getElementById("cooldownMsg").innerText="Cooldown...";
-setTimeout(()=>{buttonCooldown=false;document.getElementById("cooldownMsg").innerText="";},1000);
+setTimeout(()=>{buttonCooldown=false;document.getElementById("cooldownMsg").innerText="";},1200);
 let randomFactor=Math.floor(Math.random()*10)-5;
-tension+=c.e+randomFactor;clamp();updateBar();checkGame();nextEvent();
+tension+=c.e+randomFactor;localTension+=Math.floor(Math.random()*5);
+clamp();updateBar();checkGame();nextEvent();updateMap();
 };
 div.appendChild(btn);
 });
 }
 
 function useAbility(){if(!gameRunning||abilityUsed) return;
-tension-=25;abilityUsed=true;
+tension-=25;localTension-=15;abilityUsed=true;
 document.getElementById("abilityBtn").disabled=true;document.getElementById("abilityBtn").classList.add("used");
 clamp();updateBar();
 }
@@ -193,7 +199,15 @@ if(div.children.length>10) div.removeChild(div.children[0]);
 div.scrollTop=div.scrollHeight;
 }
 
-function clamp(){if(tension<0)tension=0;if(tension>100)tension=100;}
+function randomMiniCrisis(){
+if(!gameRunning) return;
+const events=[
+"🚨 Missile detected! Choose action fast!","💣 Hacker group posts sensitive meme!","🔥 Mysterious explosion in neighboring country!"];
+const e=events[Math.floor(Math.random()*events.length)];
+alert(e);
+}
+
+function clamp(){if(tension<0)tension=0;if(tension>100)tension=100;if(localTension<0)localTension=0;if(localTension>100)localTension=100;}
 function updateBar(){
 document.getElementById("tension").style.width=tension+"%";
 if(tension<30) color("#2ecc71"); else if(tension<70) color("orange"); else color("red");
@@ -207,6 +221,17 @@ function endGame(text){
 gameRunning=false;clearInterval(tensionTimer);clearInterval(oddsTimer);clearInterval(commentsTimer);
 document.getElementById("finalText").innerText=text+"\nYou lasted "+time+" seconds";
 document.getElementById("restartScreen").style.display="flex";
+}
+
+function updateMap(){
+const map=document.getElementById("worldMap");map.innerHTML="";
+mapLocations.forEach(loc=>{
+const point=document.createElement("div");point.className="mapPoint red";
+point.style.left=loc.x+"px";point.style.top=loc.y+"px";
+point.title=loc.country+" – Click for event";
+point.onclick=()=>{if(!gameRunning) return;alert("Event in "+loc.country+"! Investigate wisely.");};
+map.appendChild(point);
+});
 }
 </script>
 </body>
